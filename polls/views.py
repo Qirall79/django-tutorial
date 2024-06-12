@@ -4,20 +4,29 @@ from .models import Question, Choice
 from django.template import loader
 from django.urls import reverse
 from django.views import generic
+from django.utils import timezone
+from django.db.models import Count
 
 
 class IndexView(generic.ListView):
-    template_name = 'polls/index.html'
-    context_object_name = 'latest_question_list'
+	template_name = 'polls/index.html'
+	context_object_name = 'latest_question_list'
 
-    def get_queryset(self):
-        """Return the last five published questions."""
-        return Question.objects.order_by('-pub_date')[:5]
-
+	def get_queryset(self):
+		"""Return the last five published questions."""
+		questions = Question.objects.annotate(num_choices=Count('choice')).filter(num_choices__gte=1).filter(pub_date__lte=timezone.now()).order_by('-pub_date')[:5]
+		return questions
 
 class DetailView(generic.DetailView):
-    model = Question
-    template_name = 'polls/detail.html'
+	model = Question
+	template_name = 'polls/detail.html'
+ 
+	def get_queryset(self):
+		"""
+		Excludes any questions that aren't published yet.
+		"""
+		question = Question.objects.annotate(num_choices=Count('choice')).filter(num_choices__gte=1).filter(pub_date__lte=timezone.now())
+		return question
 
 
 class ResultsView(generic.DetailView):
